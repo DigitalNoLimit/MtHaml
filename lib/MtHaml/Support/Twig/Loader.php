@@ -3,6 +3,8 @@
 namespace MtHaml\Support\Twig;
 
 use MtHaml\Environment;
+use Twig_Error_Loader;
+use Twig_Source;
 
 /**
  * Example integration of MtHaml with Twig, by proxying the Loader
@@ -28,21 +30,21 @@ class Loader implements \Twig_LoaderInterface, \Twig_ExistsLoaderInterface
         $this->loader = $loader;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getSource($name)
+    public function getSourceContext($name)
     {
-        $source = $this->loader->getSource($name);
+        /** @var Twig_Source $source */
+        $source = $this->loader->getSourceContext($name);
+        $sourceCode = $source->getCode();
+
         if ('haml' === pathinfo($name, PATHINFO_EXTENSION)) {
-            $source = $this->env->compileString($source, $name);
-        } elseif (preg_match('#^\s*{%\s*haml\s*%}#', $source, $match)) {
+            $sourceCode = $this->env->compileString($sourceCode, $name);
+        } elseif (preg_match('#^\s*{%\s*haml\s*%}#', $sourceCode, $match)) {
             $padding = str_repeat(' ', strlen($match[0]));
-            $source = $padding . substr($source, strlen($match[0]));
-            $source = $this->env->compileString($source, $name);
+            $sourceCode = $padding . substr($sourceCode, strlen($match[0]));
+            $sourceCode = $this->env->compileString($sourceCode, $name);
         }
 
-        return $source;
+        return new Twig_Source($sourceCode, $source->getName(), $source->getPath());
     }
 
     /**
